@@ -20,7 +20,7 @@ def get_packages(package):
 
 
 setup(
-    name='logger',
+    name='adc-logger',
     version='0.1.0',
     url='https://github.com/ascet-dev/adc-logger',
     python_requires='>=3.8',
@@ -31,7 +31,7 @@ setup(
     description='Python logging library with JSON formatting support',
     long_description=get_long_description(),
     long_description_content_type='text/markdown',
-    packages=get_packages('logger'),
+    packages=get_packages('adc_logger'),
     include_package_data=True,
     data_files=[('', [])],
     classifiers=[
