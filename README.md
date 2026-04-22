@@ -1,177 +1,174 @@
-# ADC Logger
+# adc-logger
 
-A flexible and configurable Python logging library with support for JSON formatting and colored console output.
+Конфигуратор стандартного Python `logging` с поддержкой JSON-формата и цветного вывода. Не заменяет stdlib logging, а упрощает его настройку через композируемые объекты вместо словарей.
 
-## Features
-
-- **JSON Logging**: Structured JSON log output with timestamps, log levels, and messages
-- **Colored Console Output**: Beautiful colored logging using `colorlog`
-- **Flexible Configuration**: Easy-to-use configuration classes for formatters, handlers, and loggers
-- **Multiple Formatters**: Support for JSON, generic colored, and access log formats
-- **Extensible**: Easy to extend with custom formatters and handlers
-
-## Installation
+## Установка
 
 ```bash
-pip install -e .
+pip install git+https://github.com/ascet-dev/adc-logger.git@main
 ```
 
-## Quick Start
+## Быстрый старт
 
 ```python
 from adc_logger import BaseLoggingConfig
+from adc_logger.configs import LoggerConfig
 import logging
 
-# Create a custom configuration
+config = BaseLoggingConfig()
+config.loggers.append(
+    LoggerConfig(name="my_app", level="INFO", handlers=["console_json"])
+)
+config.setup_logging()
+
+logger = logging.getLogger("my_app")
+logger.info("Application started")
+```
+
+Вывод (console_json):
+```json
+{"timestamp": "2025-01-15 12:00:00 +0300", "level": "INFO", "message": "Application started", "logger": "my_app"}
+```
+
+## API
+
+### BaseLoggingConfig
+
+Главный класс. Собирает конфигурацию и применяет через `logging.config.dictConfig`.
+
+```python
+from adc_logger import BaseLoggingConfig
+
+config = BaseLoggingConfig()
+config.setup_logging()        # применить конфигурацию
+config.get_logging_config()   # получить dict для dictConfig (без применения)
+```
+
+Атрибуты (можно переопределять):
+
+| Атрибут | Тип | По умолчанию |
+|---|---|---|
+| `formatters` | `list[FormatterConfig]` | 3 встроенных форматтера |
+| `handlers` | `list[HandlerConfig]` | 3 встроенных хендлера |
+| `loggers` | `list[LoggerConfig]` | `[]` |
+| `disable_existing_logger` | `bool` | `False` |
+
+### Встроенные форматтеры и хендлеры
+
+| Форматтер | Хендлер | Описание |
+|---|---|---|
+| `json` | `console_json` | Структурированный JSON вывод |
+| `generic` | `console_generic` | Цветной вывод с уровнем, именем логгера и сообщением |
+| `access` | `console_access` | Упрощенный формат для access-логов |
+
+### FormatterConfig
+
+```python
+from adc_logger.configs import FormatterConfig
+
+FormatterConfig(
+    name="custom",                              # имя для ссылки из хендлера
+    format="{asctime} - {name} - {message}",    # шаблон (опционально)
+    style="{",                                  # стиль форматирования: '{', '%', '$'
+    datefmt="%Y-%m-%d %H:%M:%S %z",            # формат даты
+    formatter_type=None,                        # кастомный класс форматтера
+)
+```
+
+### HandlerConfig
+
+```python
+from adc_logger.configs import HandlerConfig
+import logging
+
+HandlerConfig(
+    name="file_json",                     # имя хендлера
+    formatter="json",                     # имя форматтера
+    level="DEBUG",                        # уровень логирования
+    class_=logging.FileHandler,           # класс хендлера
+    filename="app.log",                   # для FileHandler
+)
+```
+
+### LoggerConfig
+
+```python
+from adc_logger.configs import LoggerConfig
+
+LoggerConfig(
+    name="my_app",                        # имя логгера
+    level="INFO",                         # уровень
+    handlers=["console_json", "file_json"],  # список хендлеров
+    propagate=True,                       # пробрасывать ли в родительский логгер
+)
+```
+
+## Примеры
+
+### JSON-логирование в файл и консоль
+
+```python
+from adc_logger import BaseLoggingConfig
+from adc_logger.configs import HandlerConfig, LoggerConfig
+import logging
+
 config = BaseLoggingConfig()
 
-# Add a logger
-from adc_logger.configs import LoggerConfig
-config.loggers.append(
-    LoggerConfig(
-        name="my_app",
-        level="INFO",
-        handlers=["console_json"]
+# Добавляем файловый хендлер
+config.handlers.append(
+    HandlerConfig(
+        name="file_json",
+        formatter="json",
+        class_=logging.FileHandler,
+        filename="app.log",
     )
 )
 
-# Setup logging
-config.setup_logging()
-
-# Use the logger
-logger = logging.getLogger("my_app")
-logger.info("Hello, World!")
-```
-
-## Configuration
-
-### Formatters
-
-The library provides three built-in formatters:
-
-1. **JSON Formatter**: Outputs structured JSON logs
-2. **Generic Formatter**: Colored console output with standard format
-3. **Access Formatter**: Simplified format for access logs
-
-### Handlers
-
-Built-in handlers include:
-- `console_json`: JSON output to console
-- `console_generic`: Colored output to console
-- `console_access`: Access log format to console
-
-### Custom Configuration
-
-You can create custom formatters, handlers, and loggers:
-
-```python
-from adc_logger.configs import FormatterConfig, HandlerConfig, LoggerConfig
-
-# Custom formatter
-custom_formatter = FormatterConfig(
-    name="custom",
-    format="{asctime} - {name} - {levelname} - {message}",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-
-# Custom handler
-file_handler = HandlerConfig(
-    name="file_handler",
-    formatter="json",
-    class_=logging.FileHandler,
-    filename="app.log"
-)
-
-# Custom logger
-app_logger = LoggerConfig(
-    name="my_app",
-    level="DEBUG",
-    handlers=["console_json", "file_handler"]
-)
-```
-
-## Examples
-
-### Basic Usage
-
-```python
-from adc_logger import BaseLoggingConfig
-import logging
-
-config = BaseLoggingConfig()
-config.setup_logging()
-
-logger = logging.getLogger(__name__)
-logger.info("Application started")
-logger.error("An error occurred")
-```
-
-### JSON Logging
-
-```python
-from adc_logger import BaseLoggingConfig
-from adc_logger.configs import LoggerConfig
-import logging
-
-config = BaseLoggingConfig()
+# Логгер пишет и в консоль, и в файл
 config.loggers.append(
     LoggerConfig(
         name="api",
-        handlers=["console_json"]
+        level="INFO",
+        handlers=["console_generic", "file_json"],
     )
 )
-config.setup_logging()
 
+config.setup_logging()
 logger = logging.getLogger("api")
-logger.info("API request received", extra={"user_id": 123, "endpoint": "/users"})
+logger.info("Request processed")
 ```
 
-### Multiple Handlers
+### Кастомный форматтер
 
 ```python
 from adc_logger import BaseLoggingConfig
-from adc_logger.configs import LoggerConfig, HandlerConfig
-import logging
+from adc_logger.configs import FormatterConfig, HandlerConfig, LoggerConfig
 
 config = BaseLoggingConfig()
 
-# Add file handler
-file_handler = HandlerConfig(
-    name="file_handler",
-    formatter="json",
-    class_=logging.FileHandler,
-    filename="app.log"
-)
-config.handlers.append(file_handler)
-
-# Configure logger with multiple handlers
-config.loggers.append(
-    LoggerConfig(
-        name="my_app",
-        handlers=["console_generic", "file_handler"]
+config.formatters.append(
+    FormatterConfig(
+        name="brief",
+        format="{levelname}: {message}",
     )
+)
+
+config.handlers.append(
+    HandlerConfig(name="console_brief", formatter="brief")
+)
+
+config.loggers.append(
+    LoggerConfig(name="worker", handlers=["console_brief"])
 )
 
 config.setup_logging()
 ```
 
-## Development
+## Требования
 
-### Project Structure
+- Python >= 3.8
+- colorlog >= 6.7.0
 
-```
-adc_logger/
-├── __init__.py      # Main exports
-├── main.py          # BaseLoggingConfig class
-├── configs.py       # Configuration classes
-└── formatters.py    # Custom formatters
-```
+## Лицензия
 
-### Dependencies
-
-- `colorlog>=6.7.0`: For colored console output
-- Python 3.8+
-
-## License
-
-MIT License 
+MIT
